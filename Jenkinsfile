@@ -1,154 +1,132 @@
 pipeline {
- 
+
     agent any
- 
+
     tools {
         jdk 'JDK21'
         maven 'Maven 3.8.7'
     }
- 
+
     environment {
         IMAGE_NAME = "taskmanager"
-        IMAGE_TAG = "v1"
+        IMAGE_TAG  = "v1"
     }
- 
+
     stages {
- 
+
         stage('Checkout Source Code') {
             steps {
                 echo "Checking out source code from GitHub..."
- 
-                git branch: 'main',
-                    url:'https://github.com/tayjes/taskmanager.git'
+
+                git(
+                    branch: 'main',
+                    url: 'https://github.com/tayjes/taskmanager.git'
+                )
             }
         }
- 
+
         stage('Verify Tools') {
             steps {
                 echo "Verifying Java..."
- 
-                bat 'java -version'
- 
+                sh 'java -version'
+
                 echo "Verifying Maven..."
- 
-                bat 'mvn -version'
- 
+                sh 'mvn -version'
+
                 echo "Verifying Docker..."
- 
-                bat 'docker --version'
- 
+                sh 'docker --version'
+
                 echo "Verifying Kubernetes..."
- 
-                bat 'kubectl version --client'
+                sh 'kubectl version --client'
             }
         }
- 
+
         stage('Clean Project') {
             steps {
                 echo "Cleaning project..."
- 
-                bat 'mvn clean'
+                sh 'mvn clean'
             }
         }
- 
+
         stage('Compile Project') {
             steps {
                 echo "Compiling project..."
- 
-                bat 'mvn compile'
+                sh 'mvn compile'
             }
         }
- 
+
         stage('Run Unit Tests') {
             steps {
                 echo "Running unit tests..."
- 
-                bat 'mvn test'
+                sh 'mvn test'
             }
         }
- 
+
         stage('Package Application') {
             steps {
                 echo "Packaging Spring Boot application..."
- 
-                bat 'mvn package'
+                sh 'mvn package'
             }
         }
- 
+
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
- 
-                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
- 
+
         stage('List Docker Images') {
             steps {
                 echo "Available Docker Images"
- 
-                bat 'docker images'
+                sh 'docker images'
             }
         }
- 
+
+        stage('Load Image into Kind') {
+            steps {
+                echo "Loading Docker image into Kind cluster..."
+                sh "kind load docker-image ${IMAGE_NAME}:${IMAGE_TAG} --name dev-cluster"
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
                 echo "Deploying application to Kubernetes..."
- 
-                bat 'kubectl apply -f k8s/deployment.yaml'
- 
-                bat 'kubectl apply -f k8s/service.yaml'
+                sh 'kubectl apply -f k8s/deployment.yaml'
+                sh 'kubectl apply -f k8s/service.yaml'
             }
         }
- 
+
         stage('Verify Deployment') {
             steps {
                 echo "Checking Deployment..."
- 
-                bat 'kubectl rollout status deployment/task-manager'
- 
-                bat 'kubectl get deployments'
- 
-                bat 'kubectl get pods'
- 
-                bat 'kubectl get svc'
+                sh 'kubectl rollout status deployment/task-manager'
+                sh 'kubectl get deployments'
+                sh 'kubectl get pods'
+                sh 'kubectl get svc'
             }
         }
- 
     }
- 
+
     post {
- 
+
         always {
- 
             echo "Pipeline Finished."
- 
         }
- 
+
         success {
- 
             echo "======================================="
- 
             echo "BUILD SUCCESSFUL"
- 
             echo "Application Deployed Successfully"
- 
             echo "======================================="
- 
         }
- 
+
         failure {
- 
             echo "======================================="
- 
             echo "BUILD FAILED"
- 
             echo "Check Jenkins Console Output"
- 
             echo "======================================="
- 
         }
- 
     }
- 
 }
