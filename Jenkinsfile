@@ -19,7 +19,7 @@ pipeline {
                 echo "Checking out source code from GitHub..."
  
                 git branch: 'main',
-                    url:https://github.com/tayjes/taskmanager.git
+                    url:'https://github.com/tayjes/taskmanager.git'
             }
         }
  
